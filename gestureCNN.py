@@ -40,7 +40,7 @@ import json
 
 import cv2
 import matplotlib
-#matplotlib.use("TkAgg")
+matplotlib.use("TkAgg")
 from matplotlib import pyplot as plt
 
 # input image dimensions
@@ -72,7 +72,7 @@ nb_conv = 3
 #%%
 #  data
 path = "./"
-path1 = "./gestures"    #path of folder of images
+path1 = "./gestures"    #path of folder of images NOT USED BY DUKE HOUSE
 
 ## Path2 is the folder which is fed in to training model
 path2 = './imgfolder_b'
@@ -100,8 +100,8 @@ def update(plot):
     for items in jsonarray:
         mul = (jsonarray[items]) / 100
         #mul = random.randint(1,100) / 100
-        cv2.line(plot,(0,y),(int(h * mul),y),(255,0,0),w)
-        cv2.putText(plot,items,(0,y+5), font , 0.7,(0,255,0),2,1)
+        cv2.line(plot,(0,y),(int(h * mul),y),(255,0,0),cv2.LINE_AA)
+        cv2.putText(plot,items,(0,y+5), font , 0.7,(255,255,255),2,3)
         y = y + w + 30
 
     return plot
@@ -111,6 +111,7 @@ def update(plot):
 #%%
 # This function can be used for converting colored img to Grayscale img
 # while copying images from path1 to path2
+# NOT USED BUT WORK BY DUKE HOUSE
 def convertToGrayImg(path1, path2):
     listing = os.listdir(path1)
     for file in listing:
@@ -232,8 +233,8 @@ def guessGesture(model, img):
     rimage = image.reshape(1, img_channels, img_rows, img_cols)
     
     # Now feed it to the NN, to fetch the predictions
-    #index = model.predict_classes(rimage)
-    #prob_array = model.predict_proba(rimage)
+    # index = model.predict_classes(rimage)
+    # prob_array = model.predict_proba(rimage)
     
     prob_array = get_output([rimage, 0])[0]
     
@@ -249,9 +250,15 @@ def guessGesture(model, img):
     import operator
     
     guess = max(d.items(), key=operator.itemgetter(1))[0]
+    # d.item like this :
+    #       dict_items([('OK', 74.88909363746643), ('NOTHING', 14.088375866413116), ('PEACE', 3.2416194677352905), ('PUNCH', 0.5709355231374502), ('STOP', 7.209968566894531)])
+    #       means like find the max key value pair.
+
     prob  = d[guess]
 
     if prob > 60.0:
+        # print(d.items())
+        # print(max(d.items(), key=operator.itemgetter(1)))
         #print(guess + "  Probability: ", prob)
 
         #Enable this to save the predictions in a json file,
@@ -344,19 +351,21 @@ def trainModel(model):
     # Now start the training of the loaded model
     hist = model.fit(X_train, Y_train, batch_size=batch_size, epochs=nb_epoch,
                  verbose=1, validation_split=0.2)
-
+    print("train finish!!")
+    #model.save('ori_4015imgs_weights2.hdf5')
     visualizeHis(hist)
 
+   #需要保存训练模型则注释掉下面这段
     ans = input("Do you want to save the trained weights - y/n ?")
     if ans == 'y':
-        filename = input("Enter file name - ")
-        fname = path + str(filename) + ".hdf5"
-        model.save_weights(fname,overwrite=True)
+       filename = input("Enter file name - ")
+       fname = path + str(filename) + ".hdf5"
+       model.save_weights(fname,overwrite=True)
     else:
-        model.save_weights("newWeight.hdf5",overwrite=True)
+       model.save_weights("newWeight.hdf5",overwrite=True)
 
-    # Save model as well
-    # model.save("newModel.hdf5")
+    # Save model as  well
+
 #%%
 
 def visualizeHis(hist):
@@ -389,42 +398,41 @@ def visualizeHis(hist):
     plt.legend(['train','val'],loc=4)
 
     plt.show()
+    print("his finish!!")
 
 #%%
 def visualizeLayers(model, img, layerIndex):
     imlist = modlistdir('./imgs')
     if img <= len(imlist):
-        
-        image = np.array(Image.open('./imgs/' + imlist[img - 1]).convert('L')).flatten()
-        
-        ## Predict
+        image = np.array(Image.open('./imgs/' +  imlist[img - 1]).convert('L')).flatten()
+
         guessGesture(model,image)
-        
         # reshape it
         image = image.reshape(img_channels, img_rows,img_cols)
-        
+
+
         # float32
         image = image.astype('float32')
-        
+
         # normalize it
         image = image / 255
-        
+
         # reshape for NN
         input_image = image.reshape(1, img_channels, img_rows, img_cols)
     else:
         X_train, X_test, Y_train, Y_test = initializers()
-        
+
         # the input image
         input_image = X_test[:img+1]
-    
-    
-    
-        
+
+
+
+
     # visualizing intermediate layers
     #output_layer = model.layers[layerIndex].output
     #output_fn = theano.function([model.layers[0].input], output_layer)
     #output_image = output_fn(input_image)
-    
+
     if layerIndex >= 1:
         visualizeLayer(model,img,input_image, layerIndex)
     else:
